@@ -34,5 +34,18 @@ df['Streak'] = calculate_streak(df)
 # Step 3: One-hot encode the 'Session' column
 df = pd.get_dummies(df, columns=['Session'], prefix='Session')
 
-# Step 4: Save the cleaned data to 'clean_log.csv'
+# Set 'Hypothetical_Balance' only for the first row
+initial_balance = 100000
+risk_per_trade = 1000
+df.loc[0, 'Hypothetical_Balance'] = initial_balance
+
+# Calculate hypothetical account balance for the rest of the rows
+for index, row in df.iloc[1:].iterrows():
+    if row['BE'] == 1:  # Win
+        df.at[index, 'Hypothetical_Balance'] = df.at[index - 1, 'Hypothetical_Balance'] + row['Max RR'] * risk_per_trade
+    elif row['BE'] == -1:  # Loss
+        df.at[index, 'Hypothetical_Balance'] = df.at[index - 1, 'Hypothetical_Balance'] - float(row['Max RR']) * risk_per_trade
+
+
+# Step 5: Save the cleaned data to 'clean_log.csv'
 df.to_csv('clean_log.csv', index=False)
