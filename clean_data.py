@@ -35,17 +35,38 @@ df['Streak'] = calculate_streak(df)
 df = pd.get_dummies(df, columns=['Session'], prefix='Session')
 
 # Set 'Hypothetical_Balance' only for the first row
-initial_balance = 100000
+initial_balance = 0
 risk_per_trade = 1000
 df.loc[0, 'Hypothetical_Balance'] = initial_balance
 
-# Calculate hypothetical account balance for the rest of the rows
+# Initialize the 'PRI' column
+df['PRI'] = 0
+
+# Calculate hypothetical account balance, PRI, and historical session losses for the rest of the rows
 for index, row in df.iloc[1:].iterrows():
+    # Update 'Hypothetical_Balance'
     if row['BE'] == 1:  # Win
         df.at[index, 'Hypothetical_Balance'] = df.at[index - 1, 'Hypothetical_Balance'] + row['Max RR'] * risk_per_trade
     elif row['BE'] == -1:  # Loss
         df.at[index, 'Hypothetical_Balance'] = df.at[index - 1, 'Hypothetical_Balance'] - float(row['Max RR']) * risk_per_trade
-
+    
+    # Update 'PRI' based on specified conditions
+    if abs(df.at[index, 'Streak']) >= 3:
+        df.at[index, 'PRI'] += 1
+    
+    if index >= 3 and (df.at[index - 1, 'Max RR'] / 3 > 7.5):
+        df.at[index, 'PRI'] += 1
+    
+    # Calculate historical session losses for all sessions
+    session_columns = [col for col in df.columns if col.startswith('Session_')]
+    historical_losses = {session: df[df[session] == 1]['BE'].eq(-1).sum() for session in session_columns}
+    
+    # Find the session with the most losses historically
+    max_loss_session = max(historical_losses, key=historical_losses.get)
+    
+    # Check if the current trade is in the session with the most losses historically
+    if row[max_loss_session] == 1:
+        df.at[index, 'PRI'] += 1
 
 # Step 5: Save the cleaned data to 'clean_log.csv'
 df.to_csv('clean_log.csv', index=False)
