@@ -29,7 +29,11 @@ df[features] = df[features].rename(columns={old_col: new_col for old_col, new_co
 # Step 4: Initialize an empty list to store predictions
 all_predictions = []
 
-# Step 5: Iterate through the parameter grid
+# Step 5: Initialize lists to store hyperparameters and accuracies
+hyperparameters = []
+accuracies = []
+
+# Step 6: Iterate through the parameter grid
 for params in ParameterGrid(param_grid):
     # Initialize an empty list to store predictions for the current hyperparameters
     predictions = []
@@ -58,20 +62,42 @@ for params in ParameterGrid(param_grid):
     accuracy = accuracy_score(df[target], predictions)
     print(f"Accuracy for hyperparameters {params}: {accuracy}")
 
-# Step 6: Get the best hyperparameters
+    # Store hyperparameters and accuracy
+    hyperparameters.append(params)
+    accuracies.append(accuracy)
+
+# Step 7: Get the best hyperparameters
 best_params = max(all_predictions, key=lambda x: accuracy_score(df[target], x['predictions']))['params']
 print(f"Best Hyperparameters: {best_params}")
 
-# Step 7: Get the best model
+# Step 8: Get the best model
 best_model = DecisionTreeClassifier(random_state=42, **best_params)
 best_model.fit(X_train, y_train)
 
-# Step 8: Make predictions
+# Step 9: Make predictions
 y_pred = best_model.predict(X_test)
 
-# Step 9: Evaluate the model
+# Step 10: Evaluate the model
 accuracy = accuracy_score(y_test, y_pred)
 print(f"Accuracy: {accuracy}")
+
+# Step 11: Create a DataFrame for hyperparameter combinations and accuracies
+result_df = pd.DataFrame(list(zip(hyperparameters, accuracies)), columns=['Hyperparameters', 'Accuracy'])
+
+# Plot a graphical table
+plt.figure(figsize=(10, 5))
+plt.axis('off')  # Hide the axis
+
+# Plot the table
+table = plt.table(cellText=result_df.values,
+                  colLabels=result_df.columns,
+                  cellLoc='center',
+                  loc='upper left')
+table.auto_set_font_size(False)
+table.set_fontsize(10)
+table.scale(1.2, 1.2)  # Adjust the table size if needed
+
+plt.show()
 
 # Plot all visualizations
 plt.figure(figsize=(15, 12))
